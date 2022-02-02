@@ -1,40 +1,99 @@
+mod tests;
+
 use std::io;
 use std::io::Error;
-
-type Line = String;
-type Tokenstream = Vec<String>;
-
-pub enum TFlags {
-    CODE,
-    LIST,
-    NONE
-}
+use std::path::Path;
+use std::thread::current;
+use crate::Node::Text;
 
 // ToHtml Trait for all elements that will be "rendered" to html
 pub trait ToHtml {
     fn to_html(self) -> Result<String, Error>;
 }
 
-pub trait Token<T> {
-    fn tokenize(&self, flag: TFlags) -> (Box<T>, TFlags);
+pub trait Parser {
+    fn parse(self) -> Box<Node>;
 }
 
-// Top-level Markdown document data
+// Markdown document data
 pub struct Document {
-    top: Vec<Node>
+    path: String,
+    markdown: String,
 }
 
 impl Document {
-    pub fn parse(markdown: Vec<String>) {
-        let mut doc = Document {
-            top: Vec::new()
-        };
+    pub fn parse(mut markdown: String) {
+    }
+}
+
+impl Parser for String {
+    fn parse(self) -> Box<Node> {
+        // clean up the string
+        let cleaned: String = self.replace("\r\n\r", "");
+        let mut markdown: Vec<&str> = cleaned.split('\n').collect();
 
         for line in markdown {
-            if line.len() != 0 {
-                doc.top.push(line.tokenize(TFlags::NONE).0.parse());
+            let stream: Vec<&str> = line.split(' ').collect();
+            for word in stream {
+                println!("{}", word);
+
+                // check if word is a line token
+                match word {
+                    // Heading 1
+                    "#" => { return Box::new(Node::Heading { inner: line[2..].to_string().parse(), size: 1 }); },
+                    // Heading 2
+                    "##" => { return Box::new(Node::Heading { inner: line[3..].to_string().parse(), size: 2 }); },
+                    // Heading 3
+                    "###" => { return Box::new(Node::Heading { inner: line[4..].to_string().parse(), size: 3 }); },
+                    // Blockquote
+                    ">" => { return Box::new(Node::BlockQuote(
+                        line[2..].to_string().parse()
+                    )); },
+                    "-" => {},
+                    "```" => {},
+                    "---" => { return Box::new(Node::HR); },
+                    _ => {
+                        // check every word in line
+                        match &word[..1] {
+                            "*" => {
+                                return if &word[..2] == "**" {
+                                    // ** bold
+                                    Box::new(Node::Bold(word[2..word.len()-2].to_string().parse()))
+                                } else {
+                                    // italics
+                                    Box::new(Node::Italics(word[1..word.len()-1].to_string().parse()))
+                                }
+                            },
+                            "!" => {
+                                // image ![alt text](link)
+                                if let (Some(a), Some(b)) = (word.find("["), word.find("]")) {
+                                    if let (Some(c), Some(d)) = (word.find("("), word.find(")")) {
+                                        let text: &str = &word[a + 1..b];
+                                        let link: &str = &word[c + 1..d];
+                                        return Box::new(Node::Image { text: text.to_string(), link: link.to_string() });
+                                    }
+                                }
+                            },
+                            "[" => {
+                                // hyperlink [text](link)
+                                if let (Some(a), Some(b)) = (word.find("["), word.find("]")) {
+                                    if let (Some(c), Some(d)) = (word.find("("), word.find(")")) {
+                                        let text: &str = &word[a + 1..b];
+                                        let link: &str = &word[c + 1..d];
+                                        return Box::new(Node::Link { text: text.to_string(), link: link.to_string() });
+                                    }
+                                }
+                            },
+                            _ => {
+                                // Pure text
+                                return Box::new(Node::Text(word.to_string()));
+                            }
+                        }
+                    }
+                }
             }
         }
+        Box::new(Node::Text("".to_string()))
     }
 }
 
@@ -44,7 +103,7 @@ impl ToHtml for Document {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialOrd, PartialEq)]
 pub enum ListType {
     Ordered,
     Unordered
@@ -59,14 +118,16 @@ impl ToHtml for ListType {
     }
 }
 
-// enum of all supported Markdown Elements
-#[derive(Debug)]
+/*
+enum of all supported Markdown Elements
+*/
+#[derive(Debug, PartialOrd, PartialEq)]
 pub enum Node {
     Bold(Box<Node>), //**
     Italics(Box<Node>), //*
     Heading{ inner: Box<Node>, size: u8 }, // # ## ###
     Text(String),
-    Code(Box<Node>), // ``
+    Code(String), // ```
     BlockQuote(Box<Node>), // >
     List{ items: Vec<Box<Node>>, listtype: ListType}, // -
     ListItem(Box<Node>), // -
@@ -76,46 +137,14 @@ pub enum Node {
 }
 
 impl Node {
-    pub fn parse(&self) -> Node {
-        println!("{:?}", self);
-
-        let mut prev: &Node = self;
+    pub fn parse(&self) {
 
     }
 }
 
-impl Token<Node> for Line {
-    fn tokenize(&self, flag: TFlags) -> (Box<Node>, TFlags) {
-        let words: Vec<&str> = self.split_whitespace().collect();
-        let mut stripped: String = String::from("");
-        for word in &words[1..words.len()] { stripped.push_str(word); }
-
-        match words[0] {
-            "#" => {
-                (Box::new(Node::Heading { inner: Box::new(Node::Text(stripped)), size: 1 }), flag)
-            },
-            "##" => {
-                (Box::new(Node::Heading { inner: Box::new(Node::Text(stripped)), size: 2 }), flag)
-            },
-            "###" => {
-                (Box::new(Node::Heading { inner: Box::new(Node::Text(stripped)), size: 3 }), flag)
-            },
-            ">" => {
-                (Box::new(Node::BlockQuote(Box::new(Node::Text(stripped)))), flag)
-            },
-            "---" => {
-                (Box::new(Node::HR), flag)
-            },
-            "```" => {
-                (Box::new(Node::Code(Box::new(Node::Text(stripped)))), TFlags::CODE)
-            }
-            _ => {
-                (Box::new(Node::Text(self.to_string())), flag)
-            }
-        }
-    }
-}
-
+/*
+Convert a Node object to its corresponding html
+*/
 impl ToHtml for Node {
     fn to_html(self) -> Result<String, Error> {
          match self {
@@ -132,7 +161,7 @@ impl ToHtml for Node {
                 Ok(text.to_string())
              },
              Node::Code(inner) => {
-                 Ok(format!("<pre><code>{}</code></pre>", inner.to_html()?))
+                 Ok(format!("<pre><code>{}</code></pre>", inner))
              },
              Node::BlockQuote(inner) => {
                  Ok(format!("<blockquote>{}</blockquote>", inner.to_html()?))

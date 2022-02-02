@@ -3,18 +3,14 @@ mod io;
 
 use std::fs::File;
 use std::io::Read;
-use mdlib::{ToHtml, Node::*, ListType, Document, Node, Token};
-use crate::io::lines;
+use std::str::{from_utf8, from_utf8_unchecked};
+use mdlib::{ToHtml, Node::*, ListType, Document, Node, Parser};
+use crate::io::{read_string, read_vec};
 
 fn main() {
-    let res = lines(".\\_posts\\test.md")
+    let res = read_string(".\\_posts\\test.md")
         .unwrap();
-    let mut s_vec: Vec<String> = Vec::new();
-    for line in res {
-        if let Ok(lin) = line {
-            &s_vec.push(lin);
-        }
-    }
-
-    Document::parse(s_vec);
+    let test = "![text](link)".to_string();
+    test.parse();
+    //Document::parse(res);
 }
