@@ -32,36 +32,36 @@ impl Parser for String {
         let cleaned: String = self.replace("\r\n\r", "");
         let mut markdown: Vec<&str> = cleaned.split('\n').collect();
 
+        let mut parsed: Vec<Box<Node>> = Vec::new();
+
         for line in markdown {
             let stream: Vec<&str> = line.split(' ').collect();
             for word in stream {
-                println!("{}", word);
-
                 // check if word is a line token
                 match word {
                     // Heading 1
-                    "#" => { return Box::new(Node::Heading { inner: line[2..].to_string().parse(), size: 1 }); },
+                    "#" => { parsed.push(Box::new(Node::Heading { inner: line[2..].to_string().parse(), size: 1 })); },
                     // Heading 2
-                    "##" => { return Box::new(Node::Heading { inner: line[3..].to_string().parse(), size: 2 }); },
+                    "##" => { parsed.push(Box::new(Node::Heading { inner: line[3..].to_string().parse(), size: 2 })); },
                     // Heading 3
-                    "###" => { return Box::new(Node::Heading { inner: line[4..].to_string().parse(), size: 3 }); },
+                    "###" => { parsed.push(Box::new(Node::Heading { inner: line[4..].to_string().parse(), size: 3 })); },
                     // Blockquote
-                    ">" => { return Box::new(Node::BlockQuote(
-                        line[2..].to_string().parse()
-                    )); },
+                    ">" => { parsed.push(Box::new(Node::BlockQuote(line[2..].to_string().parse()))); },
                     "-" => {},
                     "```" => {},
-                    "---" => { return Box::new(Node::HR); },
+                    "---" => { parsed.push(Box::new(Node::HR)); },
                     _ => {
                         // check every word in line
                         match &word[..1] {
                             "*" => {
-                                return if &word[..2] == "**" {
+                                println!("Italic/Bold: {:?}", &word[..]);
+                                if &word[..2] == "**" {
                                     // ** bold
-                                    Box::new(Node::Bold(word[2..word.len()-2].to_string().parse()))
+                                    parsed.push(Box::new(Node::Bold(line[2..line.len()-2].to_string().parse())));
                                 } else {
                                     // italics
-                                    Box::new(Node::Italics(word[1..word.len()-1].to_string().parse()))
+                                    println!("Italic: {:?}", &word[1..word.len()-1].to_string().parse());
+                                    parsed.push(Box::new(Node::Italics(word[1..word.len()-1].to_string().parse())));
                                 }
                             },
                             "!" => {
@@ -70,7 +70,7 @@ impl Parser for String {
                                     if let (Some(c), Some(d)) = (word.find("("), word.find(")")) {
                                         let text: &str = &word[a + 1..b];
                                         let link: &str = &word[c + 1..d];
-                                        return Box::new(Node::Image { text: text.to_string(), link: link.to_string() });
+                                        parsed.push(Box::new(Node::Image { text: text.to_string(), link: link.to_string() }));
                                     }
                                 }
                             },
@@ -80,19 +80,20 @@ impl Parser for String {
                                     if let (Some(c), Some(d)) = (word.find("("), word.find(")")) {
                                         let text: &str = &word[a + 1..b];
                                         let link: &str = &word[c + 1..d];
-                                        return Box::new(Node::Link { text: text.to_string(), link: link.to_string() });
+                                        parsed.push(Box::new(Node::Link { text: text.to_string(), link: link.to_string() }));
                                     }
                                 }
                             },
                             _ => {
                                 // Pure text
-                                return Box::new(Node::Text(word.to_string()));
+                                parsed.push(Box::new(Node::Text(word.to_string())));
                             }
                         }
                     }
                 }
             }
         }
+        println!("{:?}", parsed);
         Box::new(Node::Text("".to_string()))
     }
 }

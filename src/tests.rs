@@ -3,6 +3,12 @@ mod tests {
     use crate::{Node, Parser};
 
     #[test]
+    fn test() {
+        let text =  String::from("test text");
+        assert_eq!(text.parse(), Box::new(Node::HR));
+    }
+
+    #[test]
     fn image() {
         let image = String::from("![text](link)");
         assert_eq!(Box::new(Node::Image { text: "text".to_string(), link: "link".to_string() }), image.parse());
