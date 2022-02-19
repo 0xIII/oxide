@@ -9,8 +9,9 @@ edition = "2021"
 path = "src/oxide.rs"
 name = "oxide"
 
-[lib]
-path = "src/lib.rs"
-name = "mdlib"
-
 [dependencies]
+markdown = "0.3"
+regex = "1.5.4"
+lazy_static = "1.4.0"
+serde = { version = "1.0.136", features = ["derive"] }
+serde_yaml = "0.8"
