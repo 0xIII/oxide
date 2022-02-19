@@ -5,9 +5,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
-    <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="https://unpkg.com/tachyons@4/css/tachyons.min.css">
-    <title>Post</title>
+    <title>{{title}}</title>
 </head>
 
 <body>
@@ -20,14 +19,11 @@
         </div>
 
         <header class="pr4-ns">
-            <h1 class="f2 lh-title fw2 mb3 mt0 pt3 bt bw2">Post</h1>
+            <h1 class="f2 lh-title fw2 mb3 mt0 pt3 bt bw2">{{title}}</h1>
         </header>
         <div>
             <p class="f5 lh-copy measure-wide mt0-ns black-70 nested-img">
-                <h1 id='this_is_a_test'>This is a test</h1>
-
-<p>Here I write <a href='https://google.com'>shit</a></p>
-
+                {{content}}
             </p>
         </div>
         <footer class="mt3 --black-10 black-70 bt">
@@ -39,4 +35,31 @@
         </footer>
     </article>
 </body>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        processEscapes: true
+      }
+    });
+</script>
+
+<script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+
+<style>
+    body {
+        font-family: Georgia, Palatino, serif
+    }
+    
+    ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    a {
+        color: #357edd;
+        text-decoration: none;
+    }
+    </style>
 </html>

@@ -8,7 +8,7 @@ use crate::io::{Transform, Transforms, read_string};
 type DOM = String;
 
 pub trait Buildable {
-    fn build(self) -> Result<(), Error>;
+    fn build(self, out: &str) -> Result<(), Error>;
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -25,8 +25,8 @@ pub struct Template {
 }
 
 impl Buildable for (Template, Conf) {
-    fn build(self) -> Result<(), Error> {
-        let filepath = format!("dist/{}.html", self.1.title.clone().transform(Transforms::Lowercase).transform(Transforms::NoWhitespaces));
+    fn build(self, out: &str) -> Result<(), Error> {
+        let filepath = format!("{}/{}.html", out, self.1.title.clone().transform(Transforms::Lowercase).transform(Transforms::NoWhitespaces));
         let html: DOM = markdown::to_html(self.0.markdown.as_str());
         let dom: DOM = self.0.template
             .replace("{{title}}", self.1.title.as_str())
@@ -41,9 +41,9 @@ impl Buildable for (Template, Conf) {
 }
 
 impl Buildable for Vec<(Template, Conf)> {
-    fn build(self) -> Result<(), Error> {
+    fn build(self, out: &str) -> Result<(), Error> {
         for template in self {
-            template.build()?;
+            template.build(out)?;
         }
         Ok(())
     }
@@ -73,7 +73,6 @@ impl Template {
                     .unwrap();
 
                 if templates.contains(&&config.template[..]) {
-                    println!("[+] Found template: {}", config.template);
                     let html: DOM = read_string(format!("{}/{}", template_dir, config.template)).unwrap();
 
                     let markdown: String = caps.get(2).unwrap().as_str().to_string();
