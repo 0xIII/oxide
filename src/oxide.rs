@@ -40,7 +40,7 @@ fn main() -> Result<(), Error>{
     let mut post_list_nav = String::new();
 
     for (_, config) in &templates {
-        let post_path = format!("{}{}/{}", args.root, args.out, config.title.clone().transform(Transforms::Lowercase).transform(Transforms::NoWhitespaces));
+        let post_path = format!("{}/{}.html", args.out, config.title.clone().transform(Transforms::Lowercase).transform(Transforms::NoWhitespaces));
         let markup = html! {
             li {
                 time .mid-gray.tracked{

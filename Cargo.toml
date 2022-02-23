@@ -8,6 +8,9 @@ edition = "2021"
 [[bin]]
 path = "src/oxide.rs"
 name = "oxide"
+test = false
+bench = false
+
 
 [dependencies]
 markdown = "0.3"
