@@ -19,12 +19,42 @@ pub struct Conf {
 }
 
 #[derive(Default, Debug)]
-pub struct Template {
+pub struct HomeTemplate {
+    pub template: String,
+    pub markup: String,
+}
+
+impl HomeTemplate {
+    pub fn new(template_path: &str, markup: String) -> std::io::Result<HomeTemplate> {
+        Ok(
+            HomeTemplate {
+                template: read_string(template_path)?,
+                markup
+            }
+        )
+    }
+}
+
+impl Buildable for HomeTemplate {
+    fn build(self, out: &str) -> Result<(), Error> {
+        let filepath = format!("{}/home.html", out);
+        let dom: DOM = self.template
+            .replace("{{list}}", &self.markup);
+        write(filepath, dom)?;
+
+        println!("[+] Built home.html");
+
+        Ok(())
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct PostTemplate {
     pub template: String,
     pub markdown: String,
 }
 
-impl Buildable for (Template, Conf) {
+impl Buildable for (PostTemplate, Conf) {
     fn build(self, out: &str) -> Result<(), Error> {
         let filepath = format!("{}/{}.html", out, self.1.title.clone().transform(Transforms::Lowercase).transform(Transforms::NoWhitespaces));
         let html: DOM = markdown::to_html(self.0.markdown.as_str());
@@ -40,7 +70,7 @@ impl Buildable for (Template, Conf) {
     }
 }
 
-impl Buildable for Vec<(Template, Conf)> {
+impl Buildable for Vec<(PostTemplate, Conf)> {
     fn build(self, out: &str) -> Result<(), Error> {
         for template in self {
             template.build(out)?;
@@ -49,9 +79,9 @@ impl Buildable for Vec<(Template, Conf)> {
     }
 }
 
-impl Template {
+impl PostTemplate {
     pub fn new(template: DOM, markdown: String)  -> Self {
-        Template {
+        PostTemplate {
             template,
             markdown,
         }
@@ -61,14 +91,14 @@ impl Template {
         let mut templater: Vec<(Self, Conf)> = Vec::new();
 
         lazy_static! {
-            static ref conf_regex: Regex = Regex::new(r"---([\s\S]*?)----([\s\S]*?)----").unwrap();
+            static ref CONF_REGEX: Regex = Regex::new(r"---([\s\S]*?)----([\s\S]*?)----").unwrap();
         }
 
         for post in posts {
-            let mut config: Conf;
+            let config: Conf;
             let content = read_string(&post).unwrap();
             
-            if let Some(caps) = conf_regex.captures(&content) {
+            if let Some(caps) = CONF_REGEX.captures(&content) {
                 config = serde_yaml::from_str(&format!("---{}", caps.get(1).unwrap().as_str()))
                     .unwrap();
 
@@ -77,7 +107,7 @@ impl Template {
 
                     let markdown: String = caps.get(2).unwrap().as_str().to_string();
 
-                    templater.push((Template {
+                    templater.push((PostTemplate {
                         template: html,
                         markdown,
                     }, serde_yaml::from_str(&format!("---{}", caps.get(1).unwrap().as_str()))

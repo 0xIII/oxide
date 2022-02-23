@@ -1,7 +1,8 @@
-use std::{path::PathBuf, fs::copy};
+use std::{path::PathBuf, fs::copy, io::Error};
 
 use io::list_files;
-use templater::{Template, Buildable};
+use maud::html;
+use templater::{PostTemplate, Buildable, HomeTemplate};
 
 use clap::Parser;
 
@@ -20,18 +21,44 @@ struct Args {
     #[clap(short, long, default_value = "_templates")]
     templates: String,
 
-    /// Output directory
-    #[clap(short, long, default_value = "public/posts")]
+    /// Post output directory
+    #[clap(short, long, default_value = "posts")]
     out: String,
+
+    #[clap(short, long, default_value = "public/")]
+    root: String
 }
 
-fn main() {
+fn main() -> Result<(), Error>{
     let args = Args::parse();
 
     let post_list: Vec<PathBuf> = list_files(args.posts.as_str());
-    let mut templates_paths: Vec<PathBuf> = list_files(args.templates.as_str());
-    let mut templates: Vec<&str> = templates_paths.iter().map(|p| {p.file_name().unwrap().to_str().unwrap()}).collect();
+    let templates_paths: Vec<PathBuf> = list_files(args.templates.as_str());
+    let templates: Vec<&str> = templates_paths.iter().map(|p| {p.file_name().unwrap().to_str().unwrap()}).collect();
 
-    let templates = Template::new_vec(post_list, templates, args.templates.as_str());
-    templates.build(args.out.as_str());
+    let templates = PostTemplate::new_vec(post_list, templates, args.templates.as_str());
+    let mut post_list_nav = String::new();
+
+    for (_, config) in &templates {
+        let post_path = format!("{}{}/{}", args.root, args.out, config.title);
+        let markup = html! {
+            li {
+                time .mid-gray.tracked{
+                    (config.date);
+                }
+                a href=(post_path) .dib.pl2.blue.dim {
+                    h2 .f5.dib.blue.dim {
+                        (config.title);
+                    }
+                }
+            } 
+        };
+        post_list_nav.push_str(&markup.into_string());
+    }
+
+    templates.build(&format!("{}{}", args.root, args.out))?;
+    let home = HomeTemplate::new(&format!("{}/home.html", args.templates), post_list_nav.to_string())?;
+    home.build(&args.root)?;
+
+    Ok(())
 }
