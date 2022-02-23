@@ -1,6 +1,6 @@
 use std::{path::PathBuf, fs::copy, io::Error};
 
-use io::list_files;
+use io::{list_files, Transform, Transforms};
 use maud::html;
 use templater::{PostTemplate, Buildable, HomeTemplate};
 
@@ -40,7 +40,7 @@ fn main() -> Result<(), Error>{
     let mut post_list_nav = String::new();
 
     for (_, config) in &templates {
-        let post_path = format!("{}{}/{}", args.root, args.out, config.title);
+        let post_path = format!("{}{}/{}", args.root, args.out, config.title.clone().transform(Transforms::Lowercase).transform(Transforms::NoWhitespaces));
         let markup = html! {
             li {
                 time .mid-gray.tracked{
